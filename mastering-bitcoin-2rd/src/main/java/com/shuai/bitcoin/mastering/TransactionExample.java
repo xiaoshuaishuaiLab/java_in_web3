@@ -16,12 +16,15 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class TransactionExample {
 
-
-
     //  bitcoinJ的如果没有download全量的交易数据，无法根据交易hash获取交易详情,可以通过如下api获取信息
     // todo   https://www.blockchain.com/explorer/api/blockchain_api
     public void getTransactionById(String txId) throws Exception {
         Sha256Hash txHash = Sha256Hash.wrap(txId);
+
+    }
+
+    // 发送一笔交易
+    public void sendTransaction() throws Exception {
 
     }
 
