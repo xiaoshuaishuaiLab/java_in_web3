@@ -72,7 +72,11 @@ public class WalletExample {
         //  3. 创建 HD 钱包链
         DeterministicKeyChain keyChain = DeterministicKeyChain.builder().seed(seed).build();
         // 4. BIP44 路径: m/44'/0'/0'/0/i
-        List<ChildNumber> bip44path = HDPath.parsePath("M/44H/0H/0H/0");
+        // 对于测试网使用 m/44'/1'/0'/0/i，主网使用 m/44'/0'/0'/0/i
+        String path = bitcoinNetwork == BitcoinNetwork.MAINNET ?
+                "m/44H/0H/0H/0" : // 主网
+                "m/44H/1H/0H/0";  // 测试网;
+        List<ChildNumber> bip44path = HDPath.parsePath(path);
         // 5. 派生前缀节点
         DeterministicKey parentKey = keyChain.getKeyByPath(bip44path, true);
 
@@ -101,6 +105,8 @@ public class WalletExample {
         assert firstChildAddress.toString().equals("1HQ3rb7nyLPrjnuW85MUknPekwkn7poAUm");
         // 更多对照，可以参考 https://iancoleman.io/bip39/#chinese_simplified
     }
+
+
 
     // 用书中的输入，生成相应的助记词&种子
     @Test
