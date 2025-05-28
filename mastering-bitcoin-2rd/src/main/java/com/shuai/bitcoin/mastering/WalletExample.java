@@ -9,14 +9,59 @@ import org.bitcoinj.base.internal.ByteUtils;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
+import org.bitcoinj.wallet.KeyChainGroup;
+import org.bitcoinj.wallet.Wallet;
 import org.junit.jupiter.api.Test;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 public class WalletExample {
 
+
+    public Wallet genWalletWithEntropyAndPassphrase(String entropyHex, String passphrase) {
+
+        // 1. 生成种子
+        DeterministicSeed seed = genSeedWithEntropyAndPassphrase(entropyHex, passphrase);
+
+        // 2. 指定账户路径：这里指定 m/44H/1H/0H 作为账户前缀
+        List<ChildNumber> accountPath = HDPath.parsePath("m/44H/1H/0H");
+
+// 3. 根据种子和账户路径构建 DeterministicKeyChain
+        DeterministicKeyChain keyChain = DeterministicKeyChain.builder()
+                .seed(seed)
+                .accountPath(accountPath)
+                .build();
+
+// 4. 构造 KeyChainGroup 并使用该 KeyChain
+        KeyChainGroup keyChainGroup = KeyChainGroup.builder(BitcoinNetwork.TESTNET).addChain(keyChain)
+                .build();
+
+// 5. 使用 KeyChainGroup 构造 Wallet
+        Wallet wallet = new Wallet(BitcoinNetwork.TESTNET, keyChainGroup);
+
+
+//        DeterministicSeed seed = genSeedWithEntropyAndPassphrase("63748a1c1804b6c4acd170d48fae05f8", null);
+//        DeterministicKey masterPrivateKey = HDKeyDerivation.createMasterPrivateKey(seed.getSeedBytes());
+//        Wallet wallet = Wallet.fromMasterKey(BitcoinNetwork.TESTNET,masterPrivateKey, ScriptType.P2PKH, ChildNumber.PURPOSE_BIP44);
+        // 获取一个新的（未使用的）子账号地址
+        Address freshAddress = wallet.freshReceiveAddress();
+        System.out.println("freshReceiveAddress: " + freshAddress);
+
+        return wallet;
+//        wallet.saveToFile();
+
+        // 获取钱包当前分支下所有已使用的接收地址
+//        List<DeterministicKey> issuedAddresses = wallet.getActiveKeyChain().getIssuedReceiveKeys();
+//        System.out.println(issuedAddresses);
+
+
+
+//        List<ECKey> importedKeys = wallet.getImportedKeys();
+//        System.out.println(importedKeys);
+    }
 
     public DeterministicSeed genSeedWithEntropyAndPassphrase(String entropyHex, String passphrase) {
         log.info("entropyHex = {},passphrase = {}", entropyHex, passphrase);
@@ -105,7 +150,6 @@ public class WalletExample {
         assert firstChildAddress.toString().equals("1HQ3rb7nyLPrjnuW85MUknPekwkn7poAUm");
         // 更多对照，可以参考 https://iancoleman.io/bip39/#chinese_simplified
     }
-
 
 
     // 用书中的输入，生成相应的助记词&种子
