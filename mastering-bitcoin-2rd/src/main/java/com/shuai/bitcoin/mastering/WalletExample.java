@@ -2,11 +2,11 @@ package com.shuai.bitcoin.mastering;
 
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
-import org.bitcoinj.base.Address;
-import org.bitcoinj.base.BitcoinNetwork;
-import org.bitcoinj.base.ScriptType;
+import org.bitcoinj.base.*;
 import org.bitcoinj.base.internal.ByteUtils;
+import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.*;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
@@ -14,18 +14,71 @@ import org.bitcoinj.wallet.Wallet;
 import org.junit.jupiter.api.Test;
 
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 public class WalletExample {
 
+    public static void main(String[] args) {
+        UTXOProvider utxoProvider = new UTXOProviderImpl();
+        TransactionBroadcaster transactionBroadcaster = new TransactionBroadcasterImpl();
+        WalletExample walletExample = new WalletExample();
+
+        Wallet wallet = walletExample.genWalletWithEntropyAndPassphrase("63748a1c1804b6c4acd170d48fae05f8",null);
+
+        for (int i = 0; i < 10; i++) {
+            // freshReceiveKey() 会生成并返回一个新的接收地址，并自动添加到钱包的keychain中
+            // 这确保这些地址会被Wallet自动监控
+//                    wallet.getIssuedReceiveAddresses();
+            Address derivedAddress = wallet.freshReceiveAddress();
+            System.out.println("Derived Address " + i  + ": " + derivedAddress);
+        }
+
+        // 将钱从 n1WyhSmnSYc94YHkCvWuWtyYLX9khmt9ye 发到  mn1B9zCgtPY9TvGQUR6L1L9rhiAvtTwFZ3 找零  mtSerbhU2uEnVs14njvijBBRekqk11Vwpp
+
+        Address to = LegacyAddress.fromBase58("mn1B9zCgtPY9TvGQUR6L1L9rhiAvtTwFZ3",BitcoinNetwork.TESTNET);
+        wallet.setUTXOProvider(utxoProvider);
+        Coin balance = wallet.getBalance();
+        System.out.println("Balance: " + balance); // 181152
+
+        Coin coin = Coin.valueOf(18115);
+        //todo 日后再仔细要就下找零地址的实现
+        Address changeAddress = wallet.currentChangeAddress();
+        System.out.println("changeAddress:"+changeAddress);
+
+        try {
+//            You must construct a Context object before using bitcoinj!
+//            Context context = new Context();
+            // 或者使用自定义配置
+            Context.propagate(new Context(
+                    100,                // 事件视界
+                    Coin.valueOf(1000), // 每KB交易费用
+                    true,              // 确保最小费用
+                    false              // 不放宽工作量证明要求
+            ));
+
+            // 签名逻辑怪复杂的
+//            Transaction transaction = wallet.createSend(to, coin);
+//            System.out.println("transaction:"+transaction);
+
+            Wallet.SendResult sendResult = wallet.sendCoins(transactionBroadcaster, to, coin);
+            System.out.println("Send Result: " + sendResult);
+
+//            wallet.se
+//            wallet.sendCoins(transactionBroadcaster,to, coin);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
 
     public Wallet genWalletWithEntropyAndPassphrase(String entropyHex, String passphrase) {
-
         // 1. 生成种子
         DeterministicSeed seed = genSeedWithEntropyAndPassphrase(entropyHex, passphrase);
-
+        seed.setCreationTime(Instant.parse("2025-05-01T12:00:00Z"));
         // 2. 指定账户路径：这里指定 m/44H/1H/0H 作为账户前缀
         List<ChildNumber> accountPath = HDPath.parsePath("m/44H/1H/0H");
 
@@ -41,15 +94,22 @@ public class WalletExample {
 
 // 5. 使用 KeyChainGroup 构造 Wallet
         Wallet wallet = new Wallet(BitcoinNetwork.TESTNET, keyChainGroup);
+        wallet.earliestKeyCreationTime();
 
 
 //        DeterministicSeed seed = genSeedWithEntropyAndPassphrase("63748a1c1804b6c4acd170d48fae05f8", null);
 //        DeterministicKey masterPrivateKey = HDKeyDerivation.createMasterPrivateKey(seed.getSeedBytes());
 //        Wallet wallet = Wallet.fromMasterKey(BitcoinNetwork.TESTNET,masterPrivateKey, ScriptType.P2PKH, ChildNumber.PURPOSE_BIP44);
         // 获取一个新的（未使用的）子账号地址
-        Address freshAddress = wallet.freshReceiveAddress();
-        System.out.println("freshReceiveAddress: " + freshAddress);
-
+//        for (int i = 0; i < 5; i++) {
+//            Address freshAddress = wallet.freshReceiveAddress();
+//            System.out.println("freshReceiveAddress: " + freshAddress);
+//        }
+//        wallet.calculateAllSpendCandidates();
+//        wallet.currentChangeAddress();
+//        wallet.sendCoins(
+//
+//        )
         return wallet;
 //        wallet.saveToFile();
 
@@ -113,7 +173,7 @@ public class WalletExample {
         // 打印扩展私钥和公钥
         log.info("Master Extended Private Key: {}", masterPrivateKey.serializePrivB58(bitcoinNetwork));
         log.info("Master Extended Public Key: {}", masterPrivateKey.serializePubB58(bitcoinNetwork));
-
+        log.info("Master address :{}",ECKey.fromPrivate(masterPrivateKey.getPrivKey()).toAddress(ScriptType.P2PKH, bitcoinNetwork));
         //  3. 创建 HD 钱包链
         DeterministicKeyChain keyChain = DeterministicKeyChain.builder().seed(seed).build();
         // 4. BIP44 路径: m/44'/0'/0'/0/i
