@@ -17,6 +17,7 @@ import java.util.List;
 
 public class UTXOProviderImpl implements UTXOProvider {
 
+    // todo 改成动态化的
     @Override
     public List<UTXO> getOpenTransactionOutputs(List<ECKey> keys) throws UTXOProviderException {
         Sha256Hash hash = Sha256Hash.wrap("ce476237b9d5e60e31dd82fa1dcfc8c6394cac6c8125b779453309b4b8a27203");
