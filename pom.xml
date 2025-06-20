@@ -19,6 +19,7 @@
     <modules>
         <module>mastering-bitcoin-2rd</module>
         <module>eth</module>
+        <module>chain-deposit-withdraw</module>
     </modules>
     <url/>
     <licenses>

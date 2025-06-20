@@ -33,6 +33,8 @@ public class WalletExample {
             // 这确保这些地址会被Wallet自动监控
 //                    wallet.getIssuedReceiveAddresses();
             Address derivedAddress = wallet.freshReceiveAddress();
+            DeterministicKey key = (DeterministicKey) wallet.findKeyFromPubKeyHash(derivedAddress.getHash(), ScriptType.P2PKH);
+            System.out.println("HD Path: m/" + key.getPath().toString());
             System.out.println("Derived Address " + i  + ": " + derivedAddress);
         }
 
@@ -192,6 +194,7 @@ public class WalletExample {
             ECKey ecKey = ECKey.fromPrivate(childKey.getPrivKey());
             Address address = ecKey.toAddress(ScriptType.P2PKH, bitcoinNetwork);
             log.info("address = {},Private Key (wif) = {},Public Key (hex)= {},", address, ecKey.getPrivateKeyAsWiF(bitcoinNetwork), ecKey.getPublicKeyAsHex());
+
         }
         return result;
     }

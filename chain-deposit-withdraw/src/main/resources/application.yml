@@ -1,0 +1,7 @@
+server:
+  port: 9055
+
+spring:
+  application:
+    name: wallet
+
