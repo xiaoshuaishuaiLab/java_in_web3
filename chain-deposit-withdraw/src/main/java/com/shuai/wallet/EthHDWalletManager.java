@@ -1,4 +1,6 @@
 package com.shuai.wallet;
+import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.util.Lists;
 import org.bitcoinj.base.BitcoinNetwork;
 import org.bitcoinj.base.Network;
 import org.bitcoinj.core.NetworkParameters;
@@ -19,6 +21,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 public class EthHDWalletManager {
 
     private static final Network network = BitcoinNetwork.MAINNET;
@@ -38,7 +41,8 @@ public class EthHDWalletManager {
      */
     public static DeterministicSeed createMasterSeed(List<String> mnemonic, String passphrase) {
         long creationTimeSeconds = System.currentTimeMillis() / 1000;
-        return new DeterministicSeed(mnemonic, null, passphrase, creationTimeSeconds);
+        DeterministicSeed seed = new DeterministicSeed(mnemonic, null, passphrase, creationTimeSeconds);
+        return seed;
     }
 
     /**
@@ -55,7 +59,12 @@ public class EthHDWalletManager {
             new ChildNumber(userId, false)
         );
         DeterministicKey key = chain.getKeyByPath(path, true);
-        String address = Numeric.prependHexPrefix(Keys.getAddress(key.getPublicKeyAsHex()));
+        System.out.println("Path: " + key.getPath());
+
+        String publicKeyHex = Numeric.toHexStringNoPrefix(key.getPubKey());
+        String address = Keys.toChecksumAddress(Keys.getAddress(publicKeyHex)); // 确保使用 checksum address
+
+//        String address = Numeric.prependHexPrefix(Keys.getAddress(key.getPublicKeyAsHex()));
         return address ;
     }
 
@@ -70,6 +79,9 @@ public class EthHDWalletManager {
             new ChildNumber(0, true),
             new ChildNumber(0, false)
         );
+        DeterministicKey masterPrivateKey = HDKeyDerivation.createMasterPrivateKey(masterSeed.getSeedBytes());
+        log.info("Master Private Key (hex): {}", masterPrivateKey.getPrivateKeyAsHex());
+
         DeterministicKey key = chain.getKeyByPath(path, true);
         System.out.println("xpub路径: " + key.getPathAsString());
         return key.serializePubB58(network);
@@ -85,7 +97,6 @@ public class EthHDWalletManager {
         DeterministicKey xpubKey = DeterministicKey.deserializeB58(accountXpub, network);
         System.out.println("xpubKey路径: " + xpubKey.getPathAsString());
         DeterministicKey childKey = HDKeyDerivation.deriveChildKey(xpubKey, new ChildNumber(userId, false));
-
         String address = Numeric.prependHexPrefix(Keys.getAddress(childKey.getPublicKeyAsHex()));
         return address;
     }
@@ -93,6 +104,9 @@ public class EthHDWalletManager {
     public static void main(String[] args) throws Exception {
         // 1. 离线生成助记词
         List<String> mnemonic = generateMnemonic();
+        mnemonic = Lists.list("amused","multiply","ridge","ugly","volume","leisure","surge","fun","pony","clutch","surprise","whisper");
+//        hybrid risk elite mountain logic crazy sword cable series evolve idea donor
+//        mnemonic = Lists.list("hybrid","risk","elite","mountain","logic","crazy","sword","cable","series","evolve","idea","donor");
         System.out.println("生成的助记词: " + String.join(" ", mnemonic));
 
         // 2. 离线生成主种子
@@ -105,12 +119,18 @@ public class EthHDWalletManager {
         System.out.println("账户xpub (m/44'/60'/0'/0): " + accountXpub);
 
         // 4. 在线为不同用户派生充值地址
-        int userId1 = 99;
-        int userId2 = 1;
+        int userId1 = 1;
+//        int userId2 = 1;
         String address1 = deriveUserAddressFromXpub(accountXpub, userId1);
         System.out.println("用户 " + userId1 + " 的充值地址: " + address1);
         String offlineAddress1 = deriveUserKeyPair(masterSeed, userId1);
         System.out.println("用户 " + userId1 + " 离线派生私钥对应地址: " + offlineAddress1);
         System.out.println("地址是否一致: " + address1.equalsIgnoreCase(offlineAddress1));
+
+        for (int i = 0;i<10;i++) {
+            String address = deriveUserKeyPair(masterSeed, i);
+            System.out.println("address"+address);
+
+        }
     }
 }

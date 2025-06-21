@@ -1,5 +1,9 @@
 package com.shuai.wallet.controller;
 
+import com.shuai.wallet.enums.CurrencyCodeEnum;
+import com.shuai.wallet.service.WalletService;
+import jakarta.annotation.Resource;
+import jnr.ffi.annotations.In;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,23 +21,35 @@ import java.security.NoSuchProviderException;
 @RestController
 public class WalletController {
 
+    @Resource
+    private WalletService ETHWalletService;
+
 
     // "ETH", "BTC", "USDT")
+    // uid = 1 的 adress 是 0xbedebf01d0410abc658dc7dd45b1621d424441b2
     @GetMapping("user/depositAddress")
-    public String getDepositAddress(@RequestParam String currencyCode) {
+    public String getDepositAddress(@RequestParam Integer uid, @RequestParam String currencyCode) {
+        Integer childNum = getChildNumByUid(uid);
         try {
-            // 非确定钱包的逻辑不好，应该换成hd钱包
-//            File keystoreDir = new File("/data/eth/data/keystore");
-//            if (!keystoreDir.exists()) {
-//                keystoreDir.mkdirs();
-//            }
-//            String fileName = WalletUtils.generateNewWalletFile("", keystoreDir, true);
-//            log.info("getDepositAddress, fileName: {}", fileName);
-        }  catch (Exception e) {
+            if (currencyCode.equals(CurrencyCodeEnum.ETH.getCode()) || currencyCode.equals(CurrencyCodeEnum.USDT.getCode())) {
+                String address = ETHWalletService.getAddress(childNum);
+                return address;
+            } else {
+                // todo btc
+            }
+        } catch (Exception e) {
             e.printStackTrace();
         }
         log.info("getDepositAddress, currencyCode: {}", currencyCode);
         return null;
     }
+
+
+
+
+    private Integer getChildNumByUid(Integer uid) {
+        return uid;
+    }
+
 
 }
