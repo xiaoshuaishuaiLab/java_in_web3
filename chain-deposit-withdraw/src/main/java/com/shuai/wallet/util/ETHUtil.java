@@ -1,11 +1,13 @@
 package com.shuai.wallet.util;
 
+import org.web3j.crypto.SignedRawTransaction;
+import org.web3j.crypto.TransactionDecoder;
 import org.web3j.utils.Numeric;
 import org.web3j.crypto.Keys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ETHAddressValidator {
+public class ETHUtil {
 
     /**
      * 最完整的以太坊地址验证
@@ -51,6 +53,30 @@ public class ETHAddressValidator {
 
         result.setValid(true);
         return result;
+    }
+
+    public static String AddressRecoveryFromTransaction(String signedTxHex) {
+        try {
+            // 1. Decode the raw transaction hex
+            // This parses the hex string into a structured transaction object
+            SignedRawTransaction signedTx = (SignedRawTransaction) TransactionDecoder.decode(signedTxHex);
+
+            // 2. Recover the sender's address from the signature
+            // The .getFrom() method performs the ecrecover operation internally
+            String senderAddress = signedTx.getFrom();
+
+            System.out.println("Successfully recovered the sender's address.");
+            System.out.println("Sender Address: " + senderAddress);
+
+            // For your specific transaction, this will print:
+            // Sender Address: 0x03742456a023a1d799abe0b6955e9a68344e43f1
+            return senderAddress;
+        } catch (Exception e) {
+            System.err.println("Failed to decode transaction or recover address: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+
     }
 
     /**

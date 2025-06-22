@@ -1,9 +1,9 @@
 package com.shuai.wallet.test;
 
-import com.shuai.wallet.util.ETHAddressValidator;
+import com.shuai.wallet.util.ETHUtil;
 import org.junit.jupiter.api.Test;
 
-public class ETHAddressValidatorTest {
+public class ETHUtilTest {
 
     @Test
     public void test() {
@@ -20,7 +20,7 @@ public class ETHAddressValidatorTest {
 
         for (String address : testAddresses) {
             System.out.println("Testing: " + address);
-            ETHAddressValidator.ValidationResult result = ETHAddressValidator.validateAddress(address);
+            ETHUtil.ValidationResult result = ETHUtil.validateAddress(address);
             System.out.println("Result: " + result);
             System.out.println("---");
         }

@@ -5,7 +5,7 @@ import com.shuai.wallet.config.ETHConfig;
 import com.shuai.wallet.enums.CurrencyCodeEnum;
 import com.shuai.wallet.service.GasService;
 import com.shuai.wallet.service.WalletService;
-import com.shuai.wallet.util.ETHAddressValidator;
+import com.shuai.wallet.util.ETHUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ObjectUtils;
@@ -13,12 +13,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.utils.Convert;
-import org.web3j.utils.Numeric;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -71,7 +69,7 @@ public class WalletController {
 
         }
         // 校验地址是否符合规范
-        ETHAddressValidator.ValidationResult validationResult = ETHAddressValidator.validateAddress(toAddress);
+        ETHUtil.ValidationResult validationResult = ETHUtil.validateAddress(toAddress);
         if (!validationResult.isValid()) {
             throw new RuntimeException(validationResult.getError());
         }
