@@ -66,6 +66,7 @@ public class AddressExample {
         byte[] privKeyBytes = Hex.decode(privKeyHex);
         // 用私钥字节数组创建 ECKey 对象
         ECKey key = ECKey.fromPrivate(privKeyBytes);
+
         // 获取公钥（压缩格式）
         String pubKeyHex = key.getPublicKeyAsHex();
         System.out.println("公钥（压缩）: " + pubKeyHex);

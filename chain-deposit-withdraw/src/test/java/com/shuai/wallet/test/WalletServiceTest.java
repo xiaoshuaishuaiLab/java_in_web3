@@ -12,11 +12,19 @@ public class WalletServiceTest {
 
     @Resource
     private WalletService ETHWalletService;
+
     @Test
-    public void test() {
+    public void testGetAddress() {
         for (int i = 0; i < 10; i++) {
             String address = ETHWalletService.getAddress(i);
             System.out.println(address);
         }
     }
+
+    @Test
+    public void test2() {
+        ETHWalletService.signedTransaction(1);
+    }
+
+
 }

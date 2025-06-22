@@ -12,6 +12,7 @@ import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.web3j.crypto.Credentials;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Keys;
 import org.web3j.utils.Numeric;
@@ -40,8 +41,7 @@ public class EthHDWalletManager {
      * 从助记词生成主种子
      */
     public static DeterministicSeed createMasterSeed(List<String> mnemonic, String passphrase) {
-        long creationTimeSeconds = System.currentTimeMillis() / 1000;
-        DeterministicSeed seed = new DeterministicSeed(mnemonic, null, passphrase, creationTimeSeconds);
+        DeterministicSeed seed = DeterministicSeed.ofMnemonic(mnemonic,passphrase);
         return seed;
     }
 
@@ -61,11 +61,13 @@ public class EthHDWalletManager {
         DeterministicKey key = chain.getKeyByPath(path, true);
         System.out.println("Path: " + key.getPath());
 
-        String publicKeyHex = Numeric.toHexStringNoPrefix(key.getPubKey());
-        String address = Keys.toChecksumAddress(Keys.getAddress(publicKeyHex)); // 确保使用 checksum address
+        ECKeyPair ecKeyPair = ECKeyPair.create(key.getPrivKey());
+        Credentials credentials = Credentials.create(ecKeyPair);
 
-//        String address = Numeric.prependHexPrefix(Keys.getAddress(key.getPublicKeyAsHex()));
-        return address ;
+        String checksumAddress = Keys.toChecksumAddress(credentials.getAddress());
+        System.out.println("Checksum Address: " + checksumAddress);
+        return checksumAddress ;
+
     }
 
     /**
@@ -97,8 +99,25 @@ public class EthHDWalletManager {
         DeterministicKey xpubKey = DeterministicKey.deserializeB58(accountXpub, network);
         System.out.println("xpubKey路径: " + xpubKey.getPathAsString());
         DeterministicKey childKey = HDKeyDerivation.deriveChildKey(xpubKey, new ChildNumber(userId, false));
-        String address = Numeric.prependHexPrefix(Keys.getAddress(childKey.getPublicKeyAsHex()));
-        return address;
+
+//        地址一定不能用下述方法生成
+//        key.getPublicKeyAsHex() 是 bitcoinj 的 DeterministicKey 的公钥（未压缩/压缩格式可能不同）。
+//        credentials.getAddress() 是 web3j 的 ECKeyPair 通过私钥推导出来的公钥再转地址。
+//        如果 bitcoinj 的公钥和 web3j 的公钥格式不一致（比如压缩/未压缩），那么它们生成的地址就会完全不同！
+//        String address = Keys.toChecksumAddress(Keys.getAddress(childKey.getPublicKeyAsHex())); // 确保使用 checksum address
+//        log.info("Address: " + address);
+
+        ECKeyPair ecKeyPair = ECKeyPair.create(childKey.getPrivKey());
+        Credentials credentials = Credentials.create(ecKeyPair);
+
+
+
+
+        String checksumAddress = Keys.toChecksumAddress(credentials.getAddress());
+        System.out.println("Checksum Address: " + checksumAddress);
+        return checksumAddress;
+//        String address = Numeric.prependHexPrefix(Keys.getAddress(childKey.getPublicKeyAsHex()));
+//        return address;
     }
 
     public static void main(String[] args) throws Exception {

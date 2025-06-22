@@ -34,3 +34,5 @@ artifacts/
 node_modules/
 notcommit/
 test_wallet
+# Spring Boot 配置文件
+src/main/resources/application-dev.yml
