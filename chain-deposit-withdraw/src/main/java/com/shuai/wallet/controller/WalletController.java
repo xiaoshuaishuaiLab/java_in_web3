@@ -8,6 +8,7 @@ import com.shuai.wallet.service.WalletService;
 import com.shuai.wallet.util.ETHUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,8 +31,10 @@ public class WalletController {
     @Resource
     private GasService gasService;
 
+    @Qualifier("httpWeb3j")
     @Resource
     private Web3j web3j;
+
     @Resource
     private ETHConfig ethConfig;
 

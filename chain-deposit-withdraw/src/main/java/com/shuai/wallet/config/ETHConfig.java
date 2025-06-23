@@ -13,5 +13,6 @@ public class ETHConfig {
      * 以太坊节点 URL
      */
     private String url;
+    private String wsUrl;
     private long chainId;
 }

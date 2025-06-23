@@ -4,6 +4,7 @@ import com.shuai.wallet.bo.GasParametersBO;
 import com.shuai.wallet.service.GasService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -16,6 +17,7 @@ import java.math.BigInteger;
 public class GasServiceImpl implements GasService {
 
     @Resource
+    @Qualifier("httpWeb3j")
     private Web3j web3j;
 
     // todo https://www.blocknative.com/ 根据这个实现gas逻辑，目前就简单的使用infura
