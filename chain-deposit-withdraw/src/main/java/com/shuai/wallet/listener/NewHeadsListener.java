@@ -31,7 +31,7 @@ public class NewHeadsListener {
     @Resource
     private DepositService depositService;
 
-    @PostConstruct
+//    @PostConstruct
     public void start() {
         log.info("启动区块链监听器...");
 

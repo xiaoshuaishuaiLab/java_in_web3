@@ -39,7 +39,8 @@ public class WalletController {
     private ETHConfig ethConfig;
 
     // "ETH", "BTC", "USDT")
-    // uid = 1 的 adress 是 0xBEDEBf01d0410ABC658dC7DD45b1621D424441b2 metamask的地址都是 checkSumAddress
+    // uid = 1 的 adress 是 0x6e575dbC4C359bcB6b5cb59756b64De8aB2BA66c  metamask的地址都是 checkSumAddress
+    // sepolia 的 USDT address is  0xaa8e23fb1079ea71e0a56f48a2aa51851d8433d0
     @GetMapping("user/depositAddress")
     public String getDepositAddress(@RequestParam Integer uid, @RequestParam String currencyCode) {
         Integer childNum = getChildNumByUid(uid);
@@ -58,25 +59,22 @@ public class WalletController {
     }
 
     /**
-     *
      * @param uid
      * @param currencyCode
-     * @param amountStr 数量 wei
-     * @param toAddress 用户个人的链上地址
+     * @param amountStr    数量 wei
+     * @param toAddress    用户个人的链上地址
      * @return
      */
     @PostMapping("user/withdraw")
     public String withdraw(@RequestParam Integer uid, @RequestParam String currencyCode, @RequestParam String amountStr, @RequestParam String toAddress) {
-        if (!currencyCode.equals(CurrencyCodeEnum.ETH.getCode())) {
+        if (!currencyCode.equals(CurrencyCodeEnum.ETH.getCode()) && !currencyCode.equals(CurrencyCodeEnum.USDT.getCode())) {
             throw new RuntimeException("not support currency code");
-
         }
         // 校验地址是否符合规范
         ETHUtil.ValidationResult validationResult = ETHUtil.validateAddress(toAddress);
         if (!validationResult.isValid()) {
             throw new RuntimeException(validationResult.getError());
         }
-        BigInteger value = Convert.toWei(BigDecimal.valueOf(Double.parseDouble(amountStr)), Convert.Unit.ETHER).toBigInteger();
 
         // 校验用户的余额 略
         // 冻结用户的余额 略
@@ -84,34 +82,50 @@ public class WalletController {
         try {
             String fromAddress = "0x6e575dbC4C359bcB6b5cb59756b64De8aB2BA66c";
             int fromAddressAccountIndex = 1;
-            BigInteger balance = web3j.ethGetBalance(fromAddress, DefaultBlockParameterName.LATEST).send().getBalance();
-            if (balance.compareTo(value) < 0) {
-                throw new RuntimeException("此钱包余额不足");
-            }
-            // 获取nonce
-            BigInteger nonce = web3j.ethGetTransactionCount(fromAddress, DefaultBlockParameterName.PENDING).send().getTransactionCount();
-            GasParametersBO gasParams = gasService.getGasParameters();
-            if (ObjectUtils.isEmpty(gasParams)) {
-                throw new RuntimeException("gasParams empty");
-            }
-            String signedTransactionData = ETHWalletService.signedTransaction(fromAddressAccountIndex, ethConfig.getChainId(), nonce, BigInteger.valueOf(21000), toAddress, value, gasParams.getMaxPriorityFeePerGas(), gasParams.getMaxFeePerGas());
 
-            EthSendTransaction send = web3j.ethSendRawTransaction(signedTransactionData).send();
-            log.info("send = {}", send);
-            if (send.hasError()) {
-                throw new RuntimeException("withdraw error");
-            } else {
+            if (currencyCode.equals(CurrencyCodeEnum.ETH.getCode())) {
+                BigInteger value = Convert.toWei(BigDecimal.valueOf(Double.parseDouble(amountStr)), Convert.Unit.ETHER).toBigInteger();
 
+                BigInteger balance = web3j.ethGetBalance(fromAddress, DefaultBlockParameterName.LATEST).send().getBalance();
+                if (balance.compareTo(value) < 0) {
+                    throw new RuntimeException("此钱包余额不足");
+                }
+                // 获取nonce
+                BigInteger nonce = web3j.ethGetTransactionCount(fromAddress, DefaultBlockParameterName.PENDING).send().getTransactionCount();
+                GasParametersBO gasParams = gasService.getGasParameters();
+                if (ObjectUtils.isEmpty(gasParams)) {
+                    throw new RuntimeException("gasParams empty");
+                }
+                String signedTransactionData = ETHWalletService.signedTransaction(fromAddressAccountIndex, ethConfig.getChainId(), nonce, toAddress, value, gasParams.getMaxPriorityFeePerGas(), gasParams.getMaxFeePerGas());
+
+                EthSendTransaction send = web3j.ethSendRawTransaction(signedTransactionData).send();
+                log.info("send = {}", send);
+                if (send.hasError()) {
+                    throw new RuntimeException("withdraw error");
+                }
+            } else if (currencyCode.equals(CurrencyCodeEnum.USDT.getCode())) {
+                String usdtContractAddress = "0xaa8e23fb1079ea71e0a56f48a2aa51851d8433d0";
+                BigInteger erc20Balance = ETHWalletService.getERC20Balance(usdtContractAddress, fromAddress);
+                BigInteger value = Convert.toWei(BigDecimal.valueOf(Double.parseDouble(amountStr)), Convert.Unit.MWEI).toBigInteger();
+                if (erc20Balance.compareTo(value) < 0) {
+                    throw new RuntimeException("此钱包余额不足");
+                }
+                // usdt 发起转账
+                // 获取nonce
+                GasParametersBO gasParams = gasService.getGasParameters();
+                if (ObjectUtils.isEmpty(gasParams)) {
+                    throw new RuntimeException("gasParams empty");
+                }
+
+                ETHWalletService.sendUSDT(fromAddressAccountIndex,ethConfig.getChainId(),usdtContractAddress,toAddress,value,gasParams.getMaxPriorityFeePerGas(),gasParams.getMaxFeePerGas());
             }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
         // 发起转账
         return null;
     }
-
-
-
 
 
     private Integer getChildNumByUid(Integer uid) {

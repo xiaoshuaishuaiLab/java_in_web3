@@ -1,5 +1,6 @@
 package com.shuai.wallet.service.impl;
 
+import com.shuai.wallet.bo.GasParametersBO;
 import com.shuai.wallet.config.ETHConfig;
 import com.shuai.wallet.config.ETHWalletConfig;
 import com.shuai.wallet.service.WalletService;
@@ -15,12 +16,27 @@ import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
+import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.crypto.*;
+import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.utils.Numeric;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.FunctionReturnDecoder;
+import org.web3j.abi.TypeReference;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.Type;
+import org.web3j.protocol.core.DefaultBlockParameterName;
+import org.web3j.protocol.core.methods.request.Transaction;
+import org.web3j.protocol.core.methods.response.EthCall;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -34,10 +50,10 @@ public class ETHWalletServiceImpl implements WalletService {
 
     @Resource
     private ETHConfig ethConfig;
-    @Autowired
-    private ETHWalletConfig ethWalletConfig;
-    @Autowired
-    private ETHWalletConfig eTHWalletConfig;
+
+    @Qualifier("httpWeb3j")
+    @Resource
+    private Web3j web3j;
 
     @Override
     public String getAddress(Integer childNum) {
@@ -53,7 +69,7 @@ public class ETHWalletServiceImpl implements WalletService {
         if (passphrase == null) {
             passphrase = "";
         }
-        DeterministicSeed seed = DeterministicSeed.ofMnemonic(eTHWalletConfig.getMnemonics(), passphrase);
+        DeterministicSeed seed = DeterministicSeed.ofMnemonic(walletConfig.getMnemonics(), passphrase);
         log.info("seed={} ", seed.toHexString());
         return seed;
     }
@@ -84,13 +100,13 @@ public class ETHWalletServiceImpl implements WalletService {
 
 
     @Override
-    public String signedTransaction(int fromAddressAccountIndex,long chainId, BigInteger nonce, BigInteger gasLimit, String to, BigInteger value, BigInteger maxPriorityFeePerGas, BigInteger maxFeePerGas) {
+    public String signedTransaction(int fromAddressAccountIndex,long chainId, BigInteger nonce, String to, BigInteger value, BigInteger maxPriorityFeePerGas, BigInteger maxFeePerGas) {
         try {
             DeterministicSeed seed = genSeedWithEntropyAndPassphrase(null);
             Credentials credentials = deriveUserCredentials(seed, fromAddressAccountIndex);
             RawTransaction transaction = RawTransaction.createEtherTransaction(chainId,
                     nonce,
-                    gasLimit, // gas limit for simple transfer
+                    BigInteger.valueOf(21000), // gas limit for simple transfer
                     to,
                     value,
                     maxPriorityFeePerGas,
@@ -105,4 +121,73 @@ public class ETHWalletServiceImpl implements WalletService {
         return null;
     }
 
+    @Override
+    public String sendUSDT(int fromAddressAccountIndex,long chainId,String usdtContract, String toAddress, BigInteger amount, BigInteger maxPriorityFeePerGas, BigInteger maxFeePerGas) {
+        try {
+            DeterministicSeed seed = genSeedWithEntropyAndPassphrase(null);
+            Credentials credentials = deriveUserCredentials(seed, fromAddressAccountIndex);
+            BigInteger nonce = web3j.ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.PENDING).send().getTransactionCount();
+            // 2. 构造ERC20 transfer方法的data
+            Function function = new Function(
+                    "transfer",
+                    Arrays.asList(new Address(toAddress), new Uint256(amount)),
+                    Arrays.asList()
+            );
+            String encodedFunction = FunctionEncoder.encode(function);
+            // 3. 构造EIP-1559 RawTransaction
+            RawTransaction rawTransaction = RawTransaction.createTransaction(
+                    chainId,
+                    nonce,
+                    new BigInteger("60000"),
+                    usdtContract,
+                    BigInteger.ZERO, // 主币转账为0
+                    encodedFunction,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas
+            );
+            // 4. 签名
+            byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, chainId, credentials);
+            String hexValue = Numeric.toHexString(signedMessage);
+            // 5. 广播
+            EthSendTransaction send = web3j.ethSendRawTransaction(hexValue).send();
+            log.info("EthSendTransaction = {}",send);
+
+            if (send.hasError()) {
+                throw new RuntimeException("USDT转账失败: " + send.getError().getMessage());
+            }
+            return send.getTransactionHash();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+
+
+    public  BigInteger getERC20Balance(String contractAddress, String accountAddress) {
+        try {
+            Function function = new Function(
+                    "balanceOf",
+                    Arrays.asList(new Address(accountAddress)),
+                    Collections.singletonList(new TypeReference<Uint256>() {})
+            );
+            String encodedFunction = FunctionEncoder.encode(function);
+
+            EthCall response = web3j.ethCall(
+                    Transaction.createEthCallTransaction(accountAddress, contractAddress, encodedFunction),
+                    DefaultBlockParameterName.LATEST
+            ).send();
+
+            List<Type> output = FunctionReturnDecoder.decode(response.getValue(), function.getOutputParameters());
+            if (output.isEmpty()) {
+                return BigInteger.ZERO;
+            }
+            return (BigInteger) output.get(0).getValue();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+    }
 }
