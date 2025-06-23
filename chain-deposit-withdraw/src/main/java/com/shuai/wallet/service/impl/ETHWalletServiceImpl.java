@@ -86,11 +86,9 @@ public class ETHWalletServiceImpl implements WalletService {
     @Override
     public String signedTransaction(int fromAddressAccountIndex,long chainId, BigInteger nonce, BigInteger gasLimit, String to, BigInteger value, BigInteger maxPriorityFeePerGas, BigInteger maxFeePerGas) {
         try {
-
             DeterministicSeed seed = genSeedWithEntropyAndPassphrase(null);
             Credentials credentials = deriveUserCredentials(seed, fromAddressAccountIndex);
-            RawTransaction transaction = RawTransaction.createEtherTransaction(
-                    chainId,
+            RawTransaction transaction = RawTransaction.createEtherTransaction(chainId,
                     nonce,
                     gasLimit, // gas limit for simple transfer
                     to,
@@ -104,13 +102,7 @@ public class ETHWalletServiceImpl implements WalletService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-//        0x02f87283aa36a780831158d68322b1ac8252089449dcde8b9e56dd9bd172002db5233c350cc7abf987038d7ea4c6800080c080a05fa6a4bb3cb8ac3da487503cf9ac7d9c306aec2703e4eaa885b98b798783ec47a024537c37b52b5a658848767eaa678913d9a273a86e75a4f3a42bbb552d80acb8
         return null;
     }
 
-    public static void main(String[] args) {
-        RawTransaction decode = TransactionDecoder.decode("0x02f87283aa36a780831158d68322b1ac8252089449dcde8b9e56dd9bd172002db5233c350cc7abf987038d7ea4c6800080c080a05fa6a4bb3cb8ac3da487503cf9ac7d9c306aec2703e4eaa885b98b798783ec47a024537c37b52b5a658848767eaa678913d9a273a86e75a4f3a42bbb552d80acb8");
-        System.out.println(decode);
-
-    }
 }

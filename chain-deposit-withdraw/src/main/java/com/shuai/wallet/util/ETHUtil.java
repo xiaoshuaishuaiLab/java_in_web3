@@ -1,13 +1,22 @@
 package com.shuai.wallet.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.web3j.crypto.SignedRawTransaction;
 import org.web3j.crypto.TransactionDecoder;
+import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.utils.Numeric;
 import org.web3j.crypto.Keys;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@Slf4j
 public class ETHUtil {
+    static ObjectMapper mapper = new ObjectMapper();
 
     /**
      * 最完整的以太坊地址验证
@@ -75,6 +84,81 @@ public class ETHUtil {
             System.err.println("Failed to decode transaction or recover address: " + e.getMessage());
             e.printStackTrace();
             return null;
+        }
+
+    }
+
+
+    public static void printBlockInfoAsJsonLine(EthBlock.Block block) {
+        try {
+            Map<String, Object> blockInfo = new LinkedHashMap<>();
+            blockInfo.put("number", block.getNumber());
+            blockInfo.put("hash", block.getHash());
+            blockInfo.put("parentHash", block.getParentHash());
+            blockInfo.put("nonce", block.getNonce());
+            blockInfo.put("miner", block.getMiner());
+//            blockInfo.put("difficulty", block.getDifficultyRaw());
+            // blockInfo.put("totalDifficulty", block.getTotalDifficultyRaw()); // 不加
+            blockInfo.put("gasLimit", block.getGasLimit());
+            blockInfo.put("gasUsed", block.getGasUsed());
+            blockInfo.put("timestamp", block.getTimestamp());
+            blockInfo.put("baseFeePerGas", block.getBaseFeePerGas());
+            blockInfo.put("extraData", block.getExtraData());
+            blockInfo.put("size", block.getSize());
+            blockInfo.put("stateRoot", block.getStateRoot());
+            blockInfo.put("receiptsRoot", block.getReceiptsRoot());
+            blockInfo.put("transactionsRoot", block.getTransactionsRoot());
+            blockInfo.put("transactionsCount", block.getTransactions().size());
+            blockInfo.put("uncles", block.getUncles());
+            blockInfo.put("withdrawals", block.getWithdrawals());
+            blockInfo.put("sealFields", block.getSealFields());
+            blockInfo.put("author", block.getAuthor());
+            blockInfo.put("mixHash", block.getMixHash());
+            blockInfo.put("logsBloom", block.getLogsBloom());
+            blockInfo.put("sha3Uncles", block.getSha3Uncles());
+            blockInfo.put("withdrawalsRoot", block.getWithdrawalsRoot());
+            blockInfo.put("blobGasUsed", block.getBlobGasUsedRaw());
+            blockInfo.put("excessBlobGas", block.getExcessBlobGasRaw());
+
+            // 详细打印 transactions
+            // 遍历所有交易，转为 Map
+            List<Object> txList = new java.util.ArrayList<>();
+            for (EthBlock.TransactionResult<?> txResult : block.getTransactions()) {
+                Object txObj = txResult.get();
+                if (txObj instanceof EthBlock.TransactionObject) {
+                    EthBlock.TransactionObject tx = (EthBlock.TransactionObject) txObj;
+                    Map<String, Object> txMap = new LinkedHashMap<>();
+                    txMap.put("hash", tx.getHash());
+                    txMap.put("nonce", tx.getNonce());
+                    txMap.put("blockHash", tx.getBlockHash());
+                    txMap.put("blockNumber", tx.getBlockNumber());
+                    txMap.put("transactionIndex", tx.getTransactionIndex());
+                    txMap.put("from", tx.getFrom());
+                    txMap.put("to", tx.getTo());
+                    txMap.put("value", tx.getValueRaw());
+                    txMap.put("gasPrice", tx.getGasPrice());
+                    txMap.put("gas", tx.getGas());
+//                txMap.put("input", tx.getInput());
+                    txMap.put("creates", tx.getCreates());
+                    txMap.put("publicKey", tx.getPublicKey());
+                    txMap.put("raw", tx.getRaw());
+//                txMap.put("r", tx.getR());
+//                txMap.put("s", tx.getS());
+//                txMap.put("v", tx.getV());
+                    txMap.put("transactionType", tx.getType());
+                    txMap.put("maxFeePerGas", tx.getMaxFeePerGasRaw());
+                    txMap.put("maxPriorityFeePerGas", tx.getMaxPriorityFeePerGasRaw());
+                    txMap.put("accessList", tx.getAccessList());
+                    txMap.put("chainId", tx.getChainId());
+                    txMap.put("yParity", tx.getyParity());
+                    txList.add(txMap);
+                }
+            }
+            blockInfo.put("transactions", txList);
+
+            log.info("blockInfo = {}", mapper.writeValueAsString(blockInfo));
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
     }
@@ -177,20 +261,45 @@ public class ETHUtil {
         private String checksumAddress;
 
         // Getters and Setters
-        public boolean isValid() { return valid; }
-        public void setValid(boolean valid) { this.valid = valid; }
+        public boolean isValid() {
+            return valid;
+        }
 
-        public String getError() { return error; }
-        public void setError(String error) { this.error = error; }
+        public void setValid(boolean valid) {
+            this.valid = valid;
+        }
 
-        public AddressType getAddressType() { return addressType; }
-        public void setAddressType(AddressType addressType) { this.addressType = addressType; }
+        public String getError() {
+            return error;
+        }
 
-        public String getNormalizedAddress() { return normalizedAddress; }
-        public void setNormalizedAddress(String normalizedAddress) { this.normalizedAddress = normalizedAddress; }
+        public void setError(String error) {
+            this.error = error;
+        }
 
-        public String getChecksumAddress() { return checksumAddress; }
-        public void setChecksumAddress(String checksumAddress) { this.checksumAddress = checksumAddress; }
+        public AddressType getAddressType() {
+            return addressType;
+        }
+
+        public void setAddressType(AddressType addressType) {
+            this.addressType = addressType;
+        }
+
+        public String getNormalizedAddress() {
+            return normalizedAddress;
+        }
+
+        public void setNormalizedAddress(String normalizedAddress) {
+            this.normalizedAddress = normalizedAddress;
+        }
+
+        public String getChecksumAddress() {
+            return checksumAddress;
+        }
+
+        public void setChecksumAddress(String checksumAddress) {
+            this.checksumAddress = checksumAddress;
+        }
 
         @Override
         public String toString() {

@@ -1,8 +1,10 @@
 package com.shuai.wallet.listener;
 
-import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shuai.wallet.service.DepositService;
 import com.shuai.wallet.service.WithdrawService;
+import com.shuai.wallet.service.impl.WithdrawServiceImpl;
+import com.shuai.wallet.util.ETHUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +20,6 @@ import java.math.BigInteger;
 @Service
 public class NewHeadsListener {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-
-
 
     @Qualifier("wsWeb3j")
     @Resource
@@ -28,6 +27,9 @@ public class NewHeadsListener {
 
     @Resource
     private WithdrawService withdrawService;
+
+    @Resource
+    private DepositService depositService;
 
     @PostConstruct
     public void start() {
@@ -40,7 +42,6 @@ public class NewHeadsListener {
     }
 
     private void processBlock(EthBlock ethBlock) {
-
 //        log.info("block result = {}", ethBlock.getResult());
         EthBlock.Block block = ethBlock.getBlock();
 
@@ -48,13 +49,7 @@ public class NewHeadsListener {
             log.warn("收到了一个空的区块通知。");
             return;
         }
-        try {
-            log.info("block = {}",ethBlock.getResult());
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+        ETHUtil.printBlockInfoAsJsonLine(block);
 
         long blockNumber = block.getNumber().longValue();
         log.info("正在处理新区块: #{}", blockNumber);
@@ -67,9 +62,11 @@ public class NewHeadsListener {
             }
 
             withdrawService.processWithdraw(tx);
+            depositService.processDeposit(tx);
         }
 
         withdrawService.updatePendingConfirmations(blockNumber);
+        depositService.updatePendingConfirmations(blockNumber);
     }
 
     private void handleError(Throwable error) {

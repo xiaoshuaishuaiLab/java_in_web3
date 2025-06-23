@@ -1,11 +1,11 @@
-package com.shuai.wallet.bo;
+package com.shuai.wallet.model;
 
 import com.shuai.wallet.enums.TransactionStatusEnum;
 import lombok.Data;
 import java.math.BigInteger;
 
 @Data
-public class PendingTransactionBO {
+public class PendingTransaction {
 
     private final String txHash;
     private final String fromAddress;
@@ -16,7 +16,7 @@ public class PendingTransactionBO {
     private long confirmations;
     private TransactionStatusEnum status;
 
-    public PendingTransactionBO(String txHash, String fromAddress, String toAddress, BigInteger value, long blockNumber) {
+    public PendingTransaction(String txHash, String fromAddress, String toAddress, BigInteger value, long blockNumber) {
         this.txHash = txHash;
         this.fromAddress = fromAddress;
         this.toAddress = toAddress;
