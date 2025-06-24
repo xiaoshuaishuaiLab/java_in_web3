@@ -22,19 +22,11 @@ public class DepositServiceTest {
     private Web3j web3j;
 
 
-
-
     @Test
     public void testUSDTDeposit() throws IOException {
-        for (int i=0; i<5; i++) {
-            try {
-                EthTransaction send = web3j.ethGetTransactionByHash("0x009c5600ab02b3e39755b5ae2ffaa1fb7fa2391bcde2cbba0427702c90ce68a8").send();
-                depositService.processDeposit(send.getTransaction().get());
-            } catch (Exception e) {
 
-            }
-        }
-
+        EthTransaction send = web3j.ethGetTransactionByHash("0x009c5600ab02b3e39755b5ae2ffaa1fb7fa2391bcde2cbba0427702c90ce68a8").send();
+        depositService.processDeposit(send.getTransaction().get());
 
     }
 }

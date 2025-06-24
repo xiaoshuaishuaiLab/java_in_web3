@@ -24,17 +24,12 @@ public class NewHeadsListenerTest {
     private Web3j web3j;
 
 
-
     @Test
-    public void test() throws IOException {
-        for (int i = 0; i < 10; i++) {
-            try {
-                EthBlock ethBlock = web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(BigInteger.valueOf(8610208L)), true).send();
-                newHeadsListener.processBlock(ethBlock);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+    public void testProcessBlock() throws IOException {
+
+        EthBlock ethBlock = web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(BigInteger.valueOf(8610208L)), true).send();
+        newHeadsListener.processBlock(ethBlock);
+
 
     }
 }
