@@ -49,7 +49,7 @@ public class USDTLogListener {
         );
     }
 
-    // usdt的处理可以通过监听转账事件来监听
+    // usdt的处理可以通过监听转账事件来监听，可以把com.shuai.wallet.listener.NewHeadsListener.processBlockLogs的逻辑迁移到这里
    private void processTransferEvent(Log transferLog) {
         log.info("transferLog : {}", transferLog);
     }
