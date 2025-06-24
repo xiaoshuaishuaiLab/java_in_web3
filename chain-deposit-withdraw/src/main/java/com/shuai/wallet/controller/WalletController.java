@@ -104,19 +104,17 @@ public class WalletController {
                     throw new RuntimeException("withdraw error");
                 }
             } else if (currencyCode.equals(CurrencyCodeEnum.USDT.getCode())) {
-                String usdtContractAddress = "0xaa8e23fb1079ea71e0a56f48a2aa51851d8433d0";
+                String usdtContractAddress = ethConfig.getUsdtContract();
                 BigInteger erc20Balance = ETHWalletService.getERC20Balance(usdtContractAddress, fromAddress);
                 BigInteger value = Convert.toWei(BigDecimal.valueOf(Double.parseDouble(amountStr)), Convert.Unit.MWEI).toBigInteger();
                 if (erc20Balance.compareTo(value) < 0) {
                     throw new RuntimeException("此钱包余额不足");
                 }
-                // usdt 发起转账
-                // 获取nonce
                 GasParametersBO gasParams = gasService.getGasParameters();
                 if (ObjectUtils.isEmpty(gasParams)) {
                     throw new RuntimeException("gasParams empty");
                 }
-
+                // usdt 发起转账
                 ETHWalletService.sendUSDT(fromAddressAccountIndex,ethConfig.getChainId(),usdtContractAddress,toAddress,value,gasParams.getMaxPriorityFeePerGas(),gasParams.getMaxFeePerGas());
             }
 

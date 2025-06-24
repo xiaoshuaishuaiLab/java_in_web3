@@ -1,5 +1,6 @@
 package com.shuai.wallet.service.impl;
 
+import com.shuai.wallet.enums.CurrencyCodeEnum;
 import com.shuai.wallet.model.PendingTransaction;
 import com.shuai.wallet.enums.TransactionStatusEnum;
 import com.shuai.wallet.service.WithdrawService;
@@ -56,7 +57,7 @@ public class WithdrawServiceImpl implements WithdrawService {
                 tx.getFrom(),
                 fromAddress,
                 tx.getValue(),
-                tx.getBlockNumber().longValue()
+                tx.getBlockNumber().longValue(), CurrencyCodeEnum.ETH.getCode()
         );
 
         transactionStore.put(tx.getHash(), pendingTx);

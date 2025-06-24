@@ -15,4 +15,6 @@ public class ETHConfig {
     private String url;
     private String wsUrl;
     private long chainId;
+    private String usdtContract;
+
 }

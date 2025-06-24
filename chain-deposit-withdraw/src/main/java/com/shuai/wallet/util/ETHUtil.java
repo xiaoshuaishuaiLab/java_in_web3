@@ -2,6 +2,7 @@ package com.shuai.wallet.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.web3j.crypto.Hash;
 import org.web3j.crypto.SignedRawTransaction;
 import org.web3j.crypto.TransactionDecoder;
 import org.web3j.protocol.core.methods.response.EthBlock;
@@ -16,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
 public class ETHUtil {
-    static ObjectMapper mapper = new ObjectMapper();
 
     /**
      * 最完整的以太坊地址验证
@@ -64,6 +64,10 @@ public class ETHUtil {
         return result;
     }
 
+    public static String getEventHash(String eventSignature) {
+        return  Hash.sha3String(eventSignature);
+    }
+
     public static String AddressRecoveryFromTransaction(String signedTxHex) {
         try {
             // 1. Decode the raw transaction hex
@@ -89,9 +93,10 @@ public class ETHUtil {
     }
 
 
-    public static void printBlockInfoAsJsonLine(EthBlock.Block block) {
+    public static Map<String, Object>  getBlockInfoAsMap(EthBlock.Block block) {
+        Map<String, Object> blockInfo = new LinkedHashMap<>();
+
         try {
-            Map<String, Object> blockInfo = new LinkedHashMap<>();
             blockInfo.put("number", block.getNumber());
             blockInfo.put("hash", block.getHash());
             blockInfo.put("parentHash", block.getParentHash());
@@ -155,12 +160,10 @@ public class ETHUtil {
                 }
             }
             blockInfo.put("transactions", txList);
-
-            log.info("blockInfo = {}", mapper.writeValueAsString(blockInfo));
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        return blockInfo;
     }
 
     /**
