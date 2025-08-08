@@ -1,12 +1,13 @@
 package com.shuai.wallet.test;
 
+import com.shuai.wallet.constant.Constants;
 import com.shuai.wallet.util.ETHUtil;
 import org.junit.jupiter.api.Test;
 
 public class ETHUtilTest {
 
     @Test
-    public void test() {
+    public void testValidateAddress() {
         // 测试各种地址
         String[] testAddresses = {
                 "0xBEDEBf01d0410ABC658dC7DD45b1621D424441b2",  // 有效地址
@@ -24,5 +25,11 @@ public class ETHUtilTest {
             System.out.println("Result: " + result);
             System.out.println("---");
         }
+    }
+
+    @Test
+    public void test2() {
+        String eventHash = ETHUtil.getEventHash(Constants.IncreaseObservationCardinalityNext);
+        System.out.println("EventHash: " + eventHash);
     }
 }
