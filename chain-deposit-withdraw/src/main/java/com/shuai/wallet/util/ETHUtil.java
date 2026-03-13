@@ -2,6 +2,7 @@ package com.shuai.wallet.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.jcajce.provider.digest.Keccak;
 import org.web3j.crypto.Hash;
 import org.web3j.crypto.SignedRawTransaction;
 import org.web3j.crypto.TransactionDecoder;
@@ -9,6 +10,7 @@ import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.utils.Numeric;
 import org.web3j.crypto.Keys;
 
+import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +19,48 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
 public class ETHUtil {
+
+    public static BigInteger getPositionId(String collateralToken, byte[]
+        collectionId) {
+        // 移除 0x 前缀
+        String cleanToken = collateralToken.startsWith("0x") ?
+            collateralToken.substring(2) : collateralToken;
+
+        // 转换为 bytes
+        byte[] tokenBytes = hexStringToByteArray(cleanToken);
+
+        if (tokenBytes.length != 20) {
+            throw new IllegalArgumentException("Invalid address length");
+        }
+
+        if (collectionId.length != 32) {
+            throw new IllegalArgumentException("collectionId must be 32 bytes");
+        }
+
+        // abi.encodePacked
+        byte[] packed = new byte[52];
+        System.arraycopy(tokenBytes, 0, packed, 0, 20);
+        System.arraycopy(collectionId, 0, packed, 20, 32);
+
+        // Keccak256
+        Keccak.Digest256 digest = new Keccak.Digest256();
+        byte[] hash = digest.digest(packed);
+
+        // 转换为 BigInteger
+        return new BigInteger(1, hash);
+    }
+
+    // Helper: hex string to byte array
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
+
 
     /**
      * 最完整的以太坊地址验证
