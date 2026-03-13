@@ -1,6 +1,7 @@
 package com.shuai.wallet.test;
 
 import com.shuai.wallet.constant.Constants;
+import com.shuai.wallet.polymarket.ConditionalTokensHelper;
 import com.shuai.wallet.util.ETHUtil;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +17,7 @@ import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
+import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -27,7 +29,8 @@ public class ETHUtilTest {
 
     //    Web3j web3j = Web3j.build(new HttpService("https://rpc.monad.xyz"));
     //    Web3j web3j = Web3j.build(new HttpService("https://mainnet.era.zksync.io"));
-    Web3j web3j = Web3j.build(new HttpService("https://mainnet.optimism.io"));
+//    Web3j web3j = Web3j.build(new HttpService("https://mainnet.optimism.io"));
+    Web3j web3j = Web3j.build(new HttpService("https://polygon-fullnode-qa.internal.nodereal.io"));
 
     @Test
     public void testValidateAddress() {
@@ -242,6 +245,119 @@ public class ETHUtilTest {
             e.printStackTrace();
             return null;
         }
+    }
 
+    @Test
+    public void testGetCollectionId() {
+        String collectionId = getCollectionId("0x4d97dcd97ec945f40cf65f87097ace5ea0476045",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "81E33CA5BD2F1C4743E88FB0741BA512111708946A6F5CC4A158EA6C01FDABF8", "1");
+        System.out.println(collectionId);
+
+        String collectionId2 =
+            ConditionalTokensHelper.getCollectionId("0000000000000000000000000000000000000000000000000000000000000000",
+                "81E33CA5BD2F1C4743E88FB0741BA512111708946A6F5CC4A158EA6C01FDABF8", new BigInteger("1"));
+
+        System.out.println(collectionId2);
+
+
+        //        0x57be06e3b010f6981762060c7e1f95773b5662c42c8008a0a64fffed36f083d0
+    }
+
+//    BigInteger positionId =
+//        ConditionalTokensHelper.getPositionId("0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", collectionId);
+//        System.out.println(positionId);
+    /**
+     * 调用链上合约的 getCollectionId 方法
+     * @param contractAddress 合约地址
+     * @param parentCollectionId 父集合ID（bytes32格式的十六进制字符串，可带或不带0x前缀）
+     * @param conditionId 条件ID（bytes32格式的十六进制字符串，可带或不带0x前缀）
+     * @param indexSet 索引集合（十六进制字符串或十进制数字字符串）
+     * @return 返回 collectionId（bytes32格式的十六进制字符串，带0x前缀）
+     */
+    public String getCollectionId(String contractAddress, String parentCollectionId, String conditionId, String indexSet) {
+        try {
+            // 处理 parentCollectionId: 移除 0x 前缀（如果有）并转换为 byte[32]
+            String cleanParentId = parentCollectionId.startsWith("0x") ? parentCollectionId.substring(2) : parentCollectionId;
+            byte[] parentIdBytes = new byte[32];
+            byte[] tempParent = hexStringToByteArray(cleanParentId);
+            System.arraycopy(tempParent, 0, parentIdBytes, 32 - tempParent.length, tempParent.length);
+
+            // 处理 conditionId: 移除 0x 前缀（如果有）并转换为 byte[32]
+            String cleanConditionId = conditionId.startsWith("0x") ? conditionId.substring(2) : conditionId;
+            byte[] conditionIdBytes = new byte[32];
+            byte[] tempCondition = hexStringToByteArray(cleanConditionId);
+            System.arraycopy(tempCondition, 0, conditionIdBytes, 32 - tempCondition.length, tempCondition.length);
+
+            // 处理 indexSet: 可能是十六进制或十进制字符串
+            BigInteger indexSetValue;
+            if (indexSet.startsWith("0x")) {
+                indexSetValue = new BigInteger(indexSet.substring(2), 16);
+            } else {
+                indexSetValue = new BigInteger(indexSet);
+            }
+
+            // 构建函数调用
+            Function function = new Function(
+                "getCollectionId",
+                Arrays.asList(
+                    new Bytes32(parentIdBytes),
+                    new Bytes32(conditionIdBytes),
+                    new Uint256(indexSetValue)
+                ),
+                Collections.singletonList(new TypeReference<Bytes32>() {})
+            );
+
+            String encodedFunction = FunctionEncoder.encode(function);
+
+            // 执行调用
+            EthCall response = web3j.ethCall(
+                Transaction.createEthCallTransaction(
+                    "0x0000000000000000000000000000000000000000",
+                    contractAddress,
+                    encodedFunction
+                ),
+                DefaultBlockParameterName.LATEST
+            ).send();
+
+            // 检查错误
+            if (response.hasError()) {
+                System.err.println("Error: " + response.getError().getMessage());
+                System.err.println("Error code: " + response.getError().getCode());
+                System.err.println("Error data: " + response.getError().getData());
+                return null;
+            }
+
+            // 解码返回值
+            List<Type> output = FunctionReturnDecoder.decode(response.getValue(), function.getOutputParameters());
+            if (output.isEmpty()) {
+                return null;
+            }
+
+            // bytes32 返回值转换为十六进制字符串
+            byte[] resultBytes = (byte[]) output.get(0).getValue();
+            StringBuilder hexString = new StringBuilder("0x");
+            for (byte b : resultBytes) {
+                hexString.append(String.format("%02x", b));
+            }
+            return hexString.toString();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * 辅助方法：将十六进制字符串转换为字节数组
+     */
+    private byte[] hexStringToByteArray(String hex) {
+        int len = hex.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
+                + Character.digit(hex.charAt(i + 1), 16));
+        }
+        return data;
     }
 }

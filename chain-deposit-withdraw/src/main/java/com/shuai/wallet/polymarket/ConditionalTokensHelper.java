@@ -2,15 +2,28 @@ package com.shuai.wallet.polymarket;
 
 import org.web3j.crypto.Hash;
 import org.web3j.utils.Numeric;
+import org.web3j.protocol.core.methods.response.Log;
+import org.web3j.abi.TypeReference;
+import org.web3j.abi.datatypes.generated.Bytes32;
+import org.web3j.abi.datatypes.generated.Uint256;
+import org.web3j.abi.datatypes.DynamicArray;
+import org.web3j.abi.FunctionReturnDecoder;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Helper class for ConditionalTokens operations
  * Port of ConditionalTokens.sol CTHelpers library to Java
  */
 public class ConditionalTokensHelper {
+
+//    uint positionId = CTHelpers.getPositionId(collateralToken,
+//        CTHelpers.getCollectionId(parentCollectionId, conditionId, indexSet));
+
+
 
     // BN128 curve parameters
     // Prime field modulus
@@ -37,6 +50,30 @@ public class ConditionalTokensHelper {
         buffer.put(toBigEndianBytes(BigInteger.valueOf(outcomeSlotCount), 32));
 
         return Hash.sha3(buffer.array());
+    }
+
+    /**
+     * Constructs an outcome collection ID from a parent collection and an outcome collection (String version)
+     *
+     * @param parentCollectionId Collection ID of the parent outcome collection as hex string (with or without 0x prefix), or null/empty if there's no parent
+     * @param conditionId Condition ID of the outcome collection as hex string (with or without 0x prefix)
+     * @param indexSet Index set of the outcome collection to combine with the parent outcome collection
+     * @return The collection ID as hex string with 0x prefix
+     */
+    public static String getCollectionId(String parentCollectionId, String conditionId, BigInteger indexSet) {
+        // Convert string inputs to byte arrays
+        byte[] parentCollectionIdBytes = null;
+        if (parentCollectionId != null && !parentCollectionId.isEmpty() && !parentCollectionId.equals("0x")) {
+            parentCollectionIdBytes = Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(parentCollectionId));
+        }
+
+        byte[] conditionIdBytes = Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(conditionId));
+
+        // Call the original method
+        byte[] result = getCollectionId(parentCollectionIdBytes, conditionIdBytes, indexSet);
+
+        // Return as hex string
+        return toHexString(result);
     }
 
     /**
@@ -110,6 +147,21 @@ public class ConditionalTokensHelper {
         }
 
         return toBigEndianBytes(x1, 32);
+    }
+
+    /**
+     * Constructs a position ID from a collateral token and an outcome collection (String version)
+     *
+     * @param collateralToken Collateral token which backs the position (with or without 0x prefix)
+     * @param collectionId ID of the outcome collection as hex string (with or without 0x prefix)
+     * @return The position ID as BigInteger
+     */
+    public static BigInteger getPositionId(String collateralToken, String collectionId) {
+        // Convert collectionId string to byte array
+        byte[] collectionIdBytes = Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(collectionId));
+
+        // Call the original method
+        return getPositionId(collateralToken, collectionIdBytes);
     }
 
     /**
@@ -272,5 +324,139 @@ public class ConditionalTokensHelper {
      */
     public static String toHexString(byte[] bytes) {
         return "0x" + Numeric.toHexStringNoPrefix(bytes);
+    }
+
+    /**
+     * PayoutRedemption event data class
+     * Event signature: PayoutRedemption(address indexed redeemer, IERC20 indexed collateralToken,
+     *                  bytes32 indexed parentCollectionId, bytes32 conditionId, uint[] indexSets, uint payout)
+     */
+    public static class PayoutRedemptionEvent {
+        private String redeemer;              // indexed
+        private String collateralToken;       // indexed
+        private String parentCollectionId;    // indexed
+        private String conditionId;           // non-indexed
+        private List<BigInteger> indexSets;   // non-indexed
+        private BigInteger payout;            // non-indexed
+
+        public PayoutRedemptionEvent(String redeemer, String collateralToken, String parentCollectionId,
+                                    String conditionId, List<BigInteger> indexSets, BigInteger payout) {
+            this.redeemer = redeemer;
+            this.collateralToken = collateralToken;
+            this.parentCollectionId = parentCollectionId;
+            this.conditionId = conditionId;
+            this.indexSets = indexSets;
+            this.payout = payout;
+        }
+
+        public String getRedeemer() {
+            return redeemer;
+        }
+
+        public String getCollateralToken() {
+            return collateralToken;
+        }
+
+        public String getParentCollectionId() {
+            return parentCollectionId;
+        }
+
+        public String getConditionId() {
+            return conditionId;
+        }
+
+        public List<BigInteger> getIndexSets() {
+            return indexSets;
+        }
+
+        public BigInteger getPayout() {
+            return payout;
+        }
+
+        @Override
+        public String toString() {
+            return "PayoutRedemptionEvent{" +
+                    "redeemer='" + redeemer + '\'' +
+                    ", collateralToken='" + collateralToken + '\'' +
+                    ", parentCollectionId='" + parentCollectionId + '\'' +
+                    ", conditionId='" + conditionId + '\'' +
+                    ", indexSets=" + indexSets +
+                    ", payout=" + payout +
+                    '}';
+        }
+    }
+
+    /**
+     * PayoutRedemption event signature (event topic 0)
+     * Manually calculated: keccak256("PayoutRedemption(address,address,bytes32,bytes32,uint256[],uint256)")
+     */
+    public static final String PAYOUT_REDEMPTION_EVENT_SIGNATURE = "0x2682012a4a4f1973119f1c9b90745d1bd91fa2bab387344f044cb3586864d18d";
+
+    /**
+     * Parses a PayoutRedemption event from a transaction log
+     *
+     * @param log The transaction log containing the event
+     * @return PayoutRedemptionEvent object with parsed data, or null if the log is not a PayoutRedemption event
+     */
+    public static PayoutRedemptionEvent parsePayoutRedemptionEvent(Log log) {
+        // Check if this is a PayoutRedemption event by comparing topic[0]
+        if (log.getTopics() == null || log.getTopics().isEmpty()) {
+            return null;
+        }
+
+        String eventSignature = log.getTopics().get(0);
+        if (!eventSignature.equals(PAYOUT_REDEMPTION_EVENT_SIGNATURE)) {
+            return null;
+        }
+
+        // PayoutRedemption has 3 indexed parameters (topics[1], topics[2], topics[3])
+        // and 3 non-indexed parameters in the data field
+        if (log.getTopics().size() < 4) {
+            throw new IllegalArgumentException("Invalid PayoutRedemption event: not enough topics");
+        }
+
+        // Parse indexed parameters from topics
+        String redeemer = "0x" + log.getTopics().get(1).substring(26);  // address is last 20 bytes (40 hex chars)
+        String collateralToken = "0x" + log.getTopics().get(2).substring(26);  // address is last 20 bytes
+        String parentCollectionId = log.getTopics().get(3);  // bytes32
+
+        // Parse non-indexed parameters from data
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        List typeReferences = new ArrayList();
+        typeReferences.add(new TypeReference<Bytes32>() {});
+        typeReferences.add(new TypeReference<DynamicArray<Uint256>>() {});
+        typeReferences.add(new TypeReference<Uint256>() {});
+
+        @SuppressWarnings("rawtypes")
+        List<org.web3j.abi.datatypes.Type> nonIndexedValues = FunctionReturnDecoder.decode(
+                log.getData(),
+                typeReferences
+        );
+
+        if (nonIndexedValues.size() < 3) {
+            throw new IllegalArgumentException("Invalid PayoutRedemption event: not enough non-indexed parameters");
+        }
+
+        String conditionId = "0x" + Numeric.toHexStringNoPrefix(
+                ((Bytes32) nonIndexedValues.get(0)).getValue()
+        );
+
+        @SuppressWarnings("unchecked")
+        DynamicArray<Uint256> indexSetsArray = (DynamicArray<Uint256>) nonIndexedValues.get(1);
+        List<BigInteger> indexSets = new ArrayList<>();
+        for (Uint256 indexSet : indexSetsArray.getValue()) {
+            indexSets.add(indexSet.getValue());
+        }
+
+        BigInteger payout = ((Uint256) nonIndexedValues.get(2)).getValue();
+
+        return new PayoutRedemptionEvent(
+                redeemer,
+                collateralToken,
+                parentCollectionId,
+                conditionId,
+                indexSets,
+                payout
+        );
     }
 }

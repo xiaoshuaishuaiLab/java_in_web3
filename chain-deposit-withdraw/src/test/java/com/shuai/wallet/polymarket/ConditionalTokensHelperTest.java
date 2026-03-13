@@ -1,16 +1,47 @@
 package com.shuai.wallet.polymarket;
 
+import com.google.common.collect.Lists;
 import org.junit.jupiter.api.Test;
+import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.utils.Numeric;
-
 import java.math.BigInteger;
-
+import java.util.List;
 
 /**
  * Test class for ConditionalTokensHelper
  */
 public class ConditionalTokensHelperTest {
 
+    @Test
+    public void testGetCollectionId() {
+
+        Log log = new Log();
+        List<String> topics = Lists.newArrayList("0x2682012a4a4f1973119f1c9b90745d1bd91fa2bab387344f044cb3586864d18d",
+            "0x00000000000000000000000093cb9d25f36b5abff52a96d122a94dc52a2f21ae",
+            "0x0000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174",
+            "0x0000000000000000000000000000000000000000000000000000000000000000");
+        log.setTopics(topics);
+        log.setData("0xd3460cd313aa9759ea67a966e9a499cb65964d6e2a2ff6902472aa83005383bb00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000001c9c380000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002");
+
+        ConditionalTokensHelper.PayoutRedemptionEvent payoutRedemptionEvent =
+            ConditionalTokensHelper.parsePayoutRedemptionEvent(log);
+        System.out.println(payoutRedemptionEvent);
+
+        String collectionId =
+            ConditionalTokensHelper.getCollectionId("0000000000000000000000000000000000000000000000000000000000000000",
+                "0x81e33ca5bd2f1c4743e88fb0741ba512111708946a6f5cc4a158ea6c01fdabf8", payoutRedemptionEvent.getIndexSets().get(0));
+        System.out.println(collectionId);
+
+        String collectionId2 =
+            ConditionalTokensHelper.getCollectionId("0000000000000000000000000000000000000000000000000000000000000000",
+                "81E33CA5BD2F1C4743E88FB0741BA512111708946A6F5CC4A158EA6C01FDABF8", new BigInteger("1"));
+        System.out.println(collectionId2);
+
+        BigInteger tokenId =
+            ConditionalTokensHelper.getPositionId("0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", collectionId);
+        System.out.println(tokenId);
+
+    }
     @Test
     public void testGetConditionId() {
         // Test parameters
