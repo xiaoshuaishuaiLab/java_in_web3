@@ -118,7 +118,7 @@ public class ETHUtilTest {
         System.out.println("EventHash: " + eventHash);
 
         eventHash = ETHUtil.getEventHash("PositionsMerge(address,address,bytes32,bytes32,uint256[],uint256)");
-        System.out.println("EventHash: " + eventHash);
+        System.out.println("PositionsMerge EventHash: " + eventHash);
 
         eventHash = ETHUtil.getEventHash("PositionsMerge(address,address,bytes32,bytes32,uint256[],uint256)");
         System.out.println("EventHash: " + eventHash);
@@ -262,6 +262,57 @@ public class ETHUtilTest {
 
 
         //        0x57be06e3b010f6981762060c7e1f95773b5662c42c8008a0a64fffed36f083d0
+    }
+
+    @Test
+    public void testBalanceOf() {
+        // 示例：查询某个地址在某个 positionId 下的余额
+        String contractAddress = "0x4d97dcd97ec945f40cf65f87097ace5ea0476045"; // ConditionalTokens 合约地址
+        String ownerAddress = "0x93Cb9D25f36b5ABFf52A96d122A94dC52A2F21Ae"; // 持有者地址
+        BigInteger positionId = new BigInteger("111067549851485404569552486028175154655987177918867920508040594182226823881635"); // position ID
+
+        BigInteger balance = getBalanceOf(contractAddress, ownerAddress, positionId);
+        System.out.println("Balance: " + balance);
+    }
+
+    /**
+     * 调用合约的 balanceOf 方法，查询指定地址在指定 positionId 下的余额
+     * @param contractAddress 合约地址
+     * @param owner 持有者地址
+     * @param positionId position ID (ERC1155 token ID)
+     * @return 余额
+     */
+    public BigInteger getBalanceOf(String contractAddress, String owner, BigInteger positionId) {
+        try {
+            Function function = new Function(
+                "balanceOf",
+                Arrays.asList(new Address(owner), new Uint256(positionId)),
+                Collections.singletonList(new TypeReference<Uint256>() {})
+            );
+            String encodedFunction = FunctionEncoder.encode(function);
+
+            EthCall response = web3j.ethCall(
+                Transaction.createEthCallTransaction("0x0000000000000000000000000000000000000000", contractAddress, encodedFunction),
+                DefaultBlockParameterName.LATEST
+            ).send();
+
+            // 检查是否有错误
+            if (response.hasError()) {
+                System.err.println("Error: " + response.getError().getMessage());
+                System.err.println("Error code: " + response.getError().getCode());
+                System.err.println("Error data: " + response.getError().getData());
+                return BigInteger.ZERO;
+            }
+
+            List<Type> output = FunctionReturnDecoder.decode(response.getValue(), function.getOutputParameters());
+            if (output.isEmpty()) {
+                return BigInteger.ZERO;
+            }
+            return (BigInteger) output.get(0).getValue();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return BigInteger.ZERO;
+        }
     }
 
 //    BigInteger positionId =
